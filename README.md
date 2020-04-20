@@ -2,7 +2,7 @@
 
 Updating a Kubernetes Secret via Cronjob
 
-> Warning: don't do this, write proper apps
+> Warning: don't do this, write proper apps; use recommended file based approaches to consume secrets as explained [here (generic sidecar)](https://learn.hashicorp.com/vault/identity-access-management/vault-agent-k8s#step-4-leverage-vault-agent-auto-auth) or [here (mutation webhook)](://www.hashicorp.com/blog/injecting-vault-secrets-into-kubernetes-pods-via-a-sidecar)
 
 (helped me to learn about service accounts and roles in Kubernetes)
 
