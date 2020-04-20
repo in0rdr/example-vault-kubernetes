@@ -17,8 +17,6 @@ spec:
     spec:
       restartPolicy: Always
       volumes:
-        - name: shared-data
-          emptyDir: {}
         - name: secrets
           secret:
             secretName: mycustomsecret
