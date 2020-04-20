@@ -6,6 +6,8 @@ Updating a Kubernetes Secret via Cronjob
 
 (helped me to learn about service accounts and roles in Kubernetes)
 
+![vault kubernetes cronjob](./img/vault-kubernetes-cronjob.png)
+
 ```bash
 
 # proxy the Kubernetes api, Vault needs to talk to your minikube instance
