@@ -1,0 +1,109 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: example-vault-kubernetes
+  name: example-vault-kubernetes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: example-vault-kubernetes
+  template:
+    metadata:
+      labels:
+        run: example-vault-kubernetes
+    spec:
+      restartPolicy: Always
+      volumes:
+        - name: shared-data
+          emptyDir: {}
+        - name: secrets
+          secret:
+            secretName: mycustomsecret
+      containers:
+        - name: legacy-app
+          image: legacy-app:latest
+          imagePullPolicy: Never
+          #secrets in env are not getting updated automatically
+          envFrom:
+          - secretRef:
+              name: mycustomsecret
+          volumeMounts:
+            - name: secrets
+              mountPath: /etc/secrets
+
+---
+# Envconsul container (watchdog to update Kubernetes secrets)
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    run: envconsul-job
+  name: envconsul-job
+spec:
+  concurrencyPolicy: Allow
+  schedule: '* * * * *'
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            run: envconsul-job
+        spec:
+          serviceAccountName: vault-auth
+          restartPolicy: Never
+          volumes:
+            - name: vault-token
+              emptyDir:
+                medium: Memory
+            - name: scripts
+              configMap:
+                name: scripts
+                defaultMode: 0744
+            - name: config
+              configMap:
+                name: hcl-config
+          containers:
+            - name: envconsul
+              image: envconsul:latest
+              imagePullPolicy: Never
+              volumeMounts:
+                - name: vault-token
+                  mountPath: /home/vault
+                - name: config
+                  mountPath: /etc/envconsul
+                - name: scripts
+                  mountPath: /scripts
+              env:
+                - name: HOME
+                  value: /home/vault
+
+                - name: VAULT_ADDR
+                  value: https://vault.cloud.org
+          initContainers:
+            # Vault container
+            - name: vault-agent-auth
+              image: vault
+
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/vault
+                - name: vault-token
+                  mountPath: /home/vault
+
+              # This assumes Vault running on local host and K8s running in Minikube using VirtualBox
+              env:
+                - name: VAULT_ADDR
+                  value: https://vault.cloud.org
+
+              # Run the Vault agent
+              args:
+                [
+                  "agent",
+                  "-config=/etc/vault/vault-agent-config.hcl",
+                  "-log-level=debug",
+                ]
